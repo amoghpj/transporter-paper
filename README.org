@@ -1,0 +1,7 @@
+Code and processed data for the transporter paper
+- Data lives in =./data/=
+- Scripts are named after the figures they produce
+
+List of things to do
+- [ ] clean up variable names in Snakefile to reflect the strains used in the dataset rather than the person who did the experiments
+- [ ] Document analysis.R
