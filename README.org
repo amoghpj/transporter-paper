@@ -5,3 +5,5 @@ Code and processed data for the transporter paper
 List of things to do
 - [ ] clean up variable names in Snakefile to reflect the strains used in the dataset rather than the person who did the experiments
 - [ ] Document analysis.R
+
+- Amogh Jalihal, Christine Degennaro, Han-Ying Jhuang, Nicoletta Commins, Spencer , Michael Springer R01, 
