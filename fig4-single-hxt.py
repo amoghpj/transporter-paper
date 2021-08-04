@@ -138,7 +138,7 @@ def calculate_residual(y1,y2):
 
 def make_on_fraction_comparison(statisticsdf, transporters):
     print("Plotting on fraction comparison")    
-    cmap1 = matplotlib.colors.ListedColormap(cm.get_cmap(cmap_name, 50).colors[5:])
+    cmap1 = matplotlib.colors.ListedColormap(cm.get_cmap(cmap_name, 10).colors)
     fig = plt.figure(figsize=(6,4))
     axes = [fig.add_subplot(2,3,i) for i in range(1,7)]
     for hxtid, hxt in enumerate(transporters):
@@ -176,10 +176,8 @@ def make_decision_threshold_comparison(statistics, transporters):
             for col in range(16):
                 wellmeans = dfoi[dfoi.well == row*16+col]['mean'].values
                 if len(wellmeans) > 0:
-                    threshcross = [w >= 0.4 for w in wellmeans]
+                    threshcross = [w >= 0.5 for w in wellmeans]
                     if sum(threshcross) > 1:
-                        # print(hxt, row, col, threshcross, wellmeans)
-                        # sys.exit()
                         tcross_list.append(col)
                         if float(sum(threshcross))/float(len(threshcross)) == 1:
                             break
@@ -196,17 +194,6 @@ def make_decision_threshold_comparison(statistics, transporters):
                     label=hxt,
                     elinewidth=1,
                     capsize=3,)
-        # wellmeans = dfoi['mean'].values
-        # wellmeanstable = np.flipud(np.reshape(wellmeans,(14,16)))
-        # decisionx = []
-        # decisiony = []        
-        # for y, row in enumerate(wellmeanstable):
-        #     for x, col in enumerate(row):
-        #         if col > 0.5:
-        #             decisionx.append(x+1)
-        #             decisiony.append(y+1)
-        #             break
-        #ax.plot(decisionx, decisiony, 'o-',lw=4,label=hxt)
     ax.set_xlim(0,17)
     ax.set_ylim(0,15)
     # ax.set_xticks([]) 
@@ -218,15 +205,19 @@ def make_decision_threshold_comparison(statistics, transporters):
     plt.savefig("./img/fig4c_decision.pdf",dpi=300)
     plt.close()
 
-
 def calculate_on_fractions(collect, transporters):
     statistics = {}
     for hxtid, hxt in enumerate(transporters):
         statistics[hxt] = {i:{"mean":[]} for i in range(14*16)}
         print("Caculating population histograms")
         mean = 0
+        fig = plt.figure(figsize=(25,25))
         x = np.linspace(0, 5., 100)        
         for i in tqdm(range(14*16)):
+            ax = fig.add_subplot(14,16,i+1)
+            ax.set_xlim(0,5)
+            ax.set_xticks([])
+            ax.set_yticks([])
             L = []
             for l in collect[hxt][i]:
                 if len(l) > 0:
@@ -244,22 +235,26 @@ def calculate_on_fractions(collect, transporters):
                     y = kernel(x)
                     onThreshold = 2.0
                     # This is an expensive function
-                    extlist.append(gaussian_fit(x, y, _l, onThreshold))
+                    extlist.append(gaussian_fit(x, y, _l, onThreshold, ax))
                 statistics[hxt][i]["mean"] = [e["on_fraction"] for e in extlist]
             # else:
             #     # We assume that the on fraction is the same as that in the well "above" it
             #     # if it wasn't measured.
             #     statistics[hxt][i] = statistics[hxt][max(0, i-16)]
+        plt.tight_layout()
+        plt.savefig(f"{hxt}.png")
+        plt.close()
     return(statistics)
 
 ## 1. Read the metadata table
 cmap_name = "viridis"
-transporters = ["HXT1",
-                "HXT2", 
-                "HXT5", 
-                "HXT10",
-                "GAL2",
-                "WT"
+transporters = [
+    # "HXT1",
+    # "HXT2", 
+    "HXT5", 
+    # "HXT10",
+    # "GAL2",
+    # "WT"
                 ]
 positionmapper =  [
     "Standard double gradient",
@@ -278,41 +273,40 @@ layouts={
                                 61:80, 62:85, 63:86, 64:87, 65:88, 66:89, 67:90, 68:91, 69:92, 70:93, 71:94, 72:95, 
                                 73:96, 74:101, 75:102, 76:103, 77:104, 78:105, 79:106, 80:107, 81:108, 82:109, 83:110, 84:111, 
                                 85:208, 86:213, 87:214, 88:215, 89:216, 90:217, 91:218, 92:219, 93:220, 94:221, 95:222, 96:223},
-
-    "Low glucose half plate":{1: 48 , 2: 53, 3:  54, 4:  55, 5:  56, 6:  57, 7:  58, 8:  59, 9:  60, 10: 61, 11: 62, 12: 63, 
-                              13:64 , 14:69 , 15:70 , 16:71 , 17:72 , 18:73 , 19:74 , 20:75 , 21:76 , 22:77 , 23:78 , 24:79 , 
-                              25:80 , 26:85 , 27:86 , 28:87 , 29:88 , 30:89 , 31:90 , 32:91 , 33:92 , 34:93 , 35:94 , 36:95 , 
-                              37:96 , 38:101, 39:102, 40:103, 41:104, 42:105, 43:106, 44:107, 45:108, 46:109, 47:110, 48:111, 
-                              49:112, 50:117, 51:118, 52:119, 53:120, 54:121, 55:122, 56:123, 57:124, 58:125, 59:126, 60:127, 
-                              61:128, 62:133, 63:134, 64:135, 65:136, 66:137, 67:138, 68:139, 69:140, 70:141, 71:142, 72:143, 
-                              73:144, 74:149, 75:150, 76:151, 77:152, 78:153, 79:154, 80:155, 81:156, 82:157, 83:158, 84:159, 
-                              85:160, 86:165, 87:166, 88:167, 89:168, 90:169, 91:170, 92:171, 93:172, 94:173, 95:174, 96:175, },
-    "Low glucose full plate":{1: 48 , 2: 53, 3:  54, 4:  55, 5:  56, 6:  57, 7:  58, 8:  59, 9:  60, 10: 61, 11: 62, 12: 63, 
-                              13:64 , 14:69 , 15:70 , 16:71 , 17:72 , 18:73 , 19:74 , 20:75 , 21:76 , 22:77 , 23:78 , 24:79 , 
-                              25:80 , 26:85 , 27:86 , 28:87 , 29:88 , 30:89 , 31:90 , 32:91 , 33:92 , 34:93 , 35:94 , 36:95 , 
-                              37:96 , 38:101, 39:102, 40:103, 41:104, 42:105, 43:106, 44:107, 45:108, 46:109, 47:110, 48:111, 
-                              49:112, 50:117, 51:118, 52:119, 53:120, 54:121, 55:122, 56:123, 57:124, 58:125, 59:126, 60:127, 
-                              61:128, 62:133, 63:134, 64:135, 65:136, 66:137, 67:138, 68:139, 69:140, 70:141, 71:142, 72:143, 
-                              73:144, 74:149, 75:150, 76:151, 77:152, 78:153, 79:154, 80:155, 81:156, 82:157, 83:158, 84:159, 
-                              85:160, 86:165, 87:166, 88:167, 89:168, 90:169, 91:170, 92:171, 93:172, 94:173, 95:174, 96:175, },
-    # "Low glucose half plate":{1: 32,   2:37,    3:38    , 4:39 ,   5:40  ,    6:41 ,     7:42,    8:43 ,    9:44 ,    10:45,    11:46,    12:47, 
-    #                           13:48 , 14: 53, 15: 54, 16: 55, 17: 56, 18: 57, 19: 58, 20:59 , 21: 60, 22: 61, 23: 62, 24: 63, 
-    #                           25:64 , 26:69 , 27:70 , 28:71,  29:72 , 30:73,  31:74 , 32:75 , 33:76 , 34:77 , 35:78 , 36:79 , 
-    #                           37:80 , 38:85 , 39:86 , 40:87,  41:88 , 42:89,  43:90 , 44:91 , 45:92 , 46:93 , 47:94 , 48:95 , 
-    #                           49:96 , 50:101, 51:102, 52:103, 53:104, 54:105, 55:106, 56:107, 57:108, 58:109, 59:110, 60:111, 
-    #                           61:112, 62:117, 63:118, 64:119, 65:120, 66:121, 67:122, 68:123, 69:124, 70:125, 71:126, 72:127, 
-    #                           73:128, 74:133, 75:134, 76:135, 77:136, 78:137, 79:138, 80:139, 81:140, 82:141, 83:142, 84:143, 
-    #                           85:144, 86:149, 87:150, 88:151, 89:152, 90:153, 91:154, 92:155, 93:156, 94:157, 95:158, 96:159},
-    # "Low glucose full plate": {1: 32, 2: 37, 3: 38 , 4: 39, 5: 40, 6: 41, 7: 42, 8: 43, 9: 44, 10: 45, 11: 46, 12: 47, 
-    #                            13: 48, 14:  53, 15:  54, 16:  55, 17:  56, 18: 57, 19:  58, 20: 59, 21:  60, 22:  61, 23:  62, 24:  63, 
-    #                            25: 64, 26: 69, 27: 70, 28: 71, 29: 72, 30: 73, 31: 74, 32: 75, 33: 76, 34: 77, 35: 78, 36: 79, 
-    #                            37: 80, 38: 85, 39: 86, 40: 87, 41: 88, 42: 89, 43: 90, 44: 91, 45: 92, 46: 93, 47: 94, 48: 95, 
-    #                            49: 96, 50: 101, 51: 102, 52: 103, 53: 104, 54: 105, 55: 106, 56: 107, 57: 108, 58: 109, 59: 110, 60: 111, 
-    #                            61: 112, 62: 117, 63: 118, 64: 119, 65: 120, 66: 121, 67: 122, 68: 123, 69: 124, 70: 125, 71: 126, 72: 127, 
-    #                            73: 128, 74: 133, 75: 134, 76: 135, 77: 136, 78: 137, 79: 138, 80: 139, 81: 140, 82: 141, 83: 142, 84: 143, 
-    #                            85: 144, 86: 149, 87: 150, 88: 151, 89: 152, 90: 153, 91: 154, 92: 155, 93: 156, 94: 157, 95: 158, 96: 159}, 
-    "Low glu-gal gradient":{1 :32,    2:33 ,     3:34,     4:35,     5:36,     6:37,     7:38,     8:39,
-                            9:48,    10:49,11:50,  12:51,  13:52,  14:53,  15:54,    16:55,
+    # "Low glucose half plate":{1: 48 , 2: 53, 3:  54, 4:  55, 5:  56, 6:  57, 7:  58, 8:  59, 9:  60, 10: 61, 11: 62, 12: 63, 
+    #                           13:64 , 14:69 , 15:70 , 16:71 , 17:72 , 18:73 , 19:74 , 20:75 , 21:76 , 22:77 , 23:78 , 24:79 , 
+    #                           25:80 , 26:85 , 27:86 , 28:87 , 29:88 , 30:89 , 31:90 , 32:91 , 33:92 , 34:93 , 35:94 , 36:95 , 
+    #                           37:96 , 38:101, 39:102, 40:103, 41:104, 42:105, 43:106, 44:107, 45:108, 46:109, 47:110, 48:111, 
+    #                           49:112, 50:117, 51:118, 52:119, 53:120, 54:121, 55:122, 56:123, 57:124, 58:125, 59:126, 60:127, 
+    #                           61:128, 62:133, 63:134, 64:135, 65:136, 66:137, 67:138, 68:139, 69:140, 70:141, 71:142, 72:143, 
+    #                           73:144, 74:149, 75:150, 76:151, 77:152, 78:153, 79:154, 80:155, 81:156, 82:157, 83:158, 84:159, 
+    #                           85:160, 86:165, 87:166, 88:167, 89:168, 90:169, 91:170, 92:171, 93:172, 94:173, 95:174, 96:175, },
+    # "Low glucose full plate":{1: 48 , 2: 53, 3:  54, 4:  55, 5:  56, 6:  57, 7:  58, 8:  59, 9:  60, 10: 61, 11: 62, 12: 63, 
+    #                           13:64 , 14:69 , 15:70 , 16:71 , 17:72 , 18:73 , 19:74 , 20:75 , 21:76 , 22:77 , 23:78 , 24:79 , 
+    #                           25:80 , 26:85 , 27:86 , 28:87 , 29:88 , 30:89 , 31:90 , 32:91 , 33:92 , 34:93 , 35:94 , 36:95 , 
+    #                           37:96 , 38:101, 39:102, 40:103, 41:104, 42:105, 43:106, 44:107, 45:108, 46:109, 47:110, 48:111, 
+    #                           49:112, 50:117, 51:118, 52:119, 53:120, 54:121, 55:122, 56:123, 57:124, 58:125, 59:126, 60:127, 
+    #                           61:128, 62:133, 63:134, 64:135, 65:136, 66:137, 67:138, 68:139, 69:140, 70:141, 71:142, 72:143, 
+    #                           73:144, 74:149, 75:150, 76:151, 77:152, 78:153, 79:154, 80:155, 81:156, 82:157, 83:158, 84:159, 
+    #                           85:160, 86:165, 87:166, 88:167, 89:168, 90:169, 91:170, 92:171, 93:172, 94:173, 95:174, 96:175, },
+    "Low glucose half plate":{1: 32,   2:37,    3:38    , 4:39 ,   5:40  ,    6:41 ,     7:42,    8:43 ,    9:44 ,    10:45,    11:46,    12:47, 
+                              13:48 , 14: 53, 15: 54, 16: 55, 17: 56, 18: 57, 19: 58, 20:59 , 21: 60, 22: 61, 23: 62, 24: 63, 
+                              25:64 , 26:69 , 27:70 , 28:71,  29:72 , 30:73,  31:74 , 32:75 , 33:76 , 34:77 , 35:78 , 36:79 , 
+                              37:80 , 38:85 , 39:86 , 40:87,  41:88 , 42:89,  43:90 , 44:91 , 45:92 , 46:93 , 47:94 , 48:95 , 
+                              49:96 , 50:101, 51:102, 52:103, 53:104, 54:105, 55:106, 56:107, 57:108, 58:109, 59:110, 60:111, 
+                              61:112, 62:117, 63:118, 64:119, 65:120, 66:121, 67:122, 68:123, 69:124, 70:125, 71:126, 72:127, 
+                              73:128, 74:133, 75:134, 76:135, 77:136, 78:137, 79:138, 80:139, 81:140, 82:141, 83:142, 84:143, 
+                              85:144, 86:149, 87:150, 88:151, 89:152, 90:153, 91:154, 92:155, 93:156, 94:157, 95:158, 96:159},
+    "Low glucose full plate": {1: 32, 2: 37, 3: 38 , 4: 39, 5: 40, 6: 41, 7: 42, 8: 43, 9: 44, 10: 45, 11: 46, 12: 47, 
+                               13: 48, 14:  53, 15:  54, 16:  55, 17:  56, 18: 57, 19:  58, 20: 59, 21:  60, 22:  61, 23:  62, 24:  63, 
+                               25: 64, 26: 69, 27: 70, 28: 71, 29: 72, 30: 73, 31: 74, 32: 75, 33: 76, 34: 77, 35: 78, 36: 79, 
+                               37: 80, 38: 85, 39: 86, 40: 87, 41: 88, 42: 89, 43: 90, 44: 91, 45: 92, 46: 93, 47: 94, 48: 95, 
+                               49: 96, 50: 101, 51: 102, 52: 103, 53: 104, 54: 105, 55: 106, 56: 107, 57: 108, 58: 109, 59: 110, 60: 111, 
+                               61: 112, 62: 117, 63: 118, 64: 119, 65: 120, 66: 121, 67: 122, 68: 123, 69: 124, 70: 125, 71: 126, 72: 127, 
+                               73: 128, 74: 133, 75: 134, 76: 135, 77: 136, 78: 137, 79: 138, 80: 139, 81: 140, 82: 141, 83: 142, 84: 143, 
+                               85: 144, 86: 149, 87: 150, 88: 151, 89: 152, 90: 153, 91: 154, 92: 155, 93: 156, 94: 157, 95: 158, 96: 159}, 
+    "Low glu-gal gradient":{1 :32, 2:33,  3:34,  4:35,  5:36,  6:37,  7:38, 8:39,
+                            9:48,  10:49, 11:50, 12:51,13:52, 14:53, 15:54, 16:55,
                             17:64 , 18:65 , 19:66 , 20:67 , 21:68 , 22:69 , 23:70 , 24:71 , 
                             25:80 , 26:81 , 27:82 , 28:83 , 29:84 , 30:85 , 31:86 , 32:87 ,
                             33:96 , 34:97 , 35:98 , 36:99 , 37:100, 38:101, 39:102, 40:103,
@@ -326,17 +320,18 @@ layouts={
 }                                      
 
 try:    
-    statisticsdf = pd.read_csv("statistics.csv",index_col=0)
+    statisticsdf = pd.read_csv("statistics.csv",index_col=None)
 except:
     prefix = "../data/fig4-single-transporter/"    
     print("1. Reading metadata table...")    
-    metadatatable = pd.read_csv(prefix + "fulldgmetatable.csv")
-    platedata = metadatatable[metadatatable.useData == 1]
-    metadatatable["ind"] = list(range(metadatatable.shape[0]))
-    plateindex = {}
+    metadatatable = pd.read_csv(prefix + "fulldgmetatable.csv",index_col='nPlate')
+    metadatatable = metadatatable[metadatatable.useData == 1]
+    metadatatable.drop([47], axis='rows',inplace=True)
+    #metadatatable["ind"] = metadatatable.index
+    # plateindex = {}
 
-    for t in transporters:
-        plateindex[t] = metadatatable[metadatatable.plateNames == t].ind.values
+    # for hxt in transporters:
+    #     plateindex[hxt] = metadatatable[metadatatable.plateNames == hxt].ind.values
 
     ## 2. Load the data file
     print("2. Reading data table...")
@@ -344,6 +339,8 @@ except:
     data = loadmat(prefix + "dgForPaper.mat",squeeze_me=False)
     print(f"\tLoading took {time.time() - starttime}s")
     plateNorm = data['normSSC'] # Read the size normalized fluorescent values
+    print(plateNorm.shape)
+    sys.exit()
 
     ## Try to fill each well in a linear list
     collect = {t:{ind:[]
@@ -352,14 +349,16 @@ except:
 
     ## 3. Collect the plates of interest
     print("3. Collect wells...")
-    exceptionlist = []#("WT", "Low glucose half plate")]
+    exceptionlist = [("WT", "Low glucose half plate"), ]
     for hxtid, hxt in enumerate(transporters):
         print(hxt)
         # filter to a given HXT
         for pt in positionmapper:
             print(pt)
             hxt_pt_plates = metadatatable[(metadatatable.plateNames == hxt) & (metadatatable.plateType == pt)]
+            print(hxt, pt, hxt_pt_plates.shape)
             for i, row in hxt_pt_plates.iterrows():
+                print(i)
                 # Plate-type specific transforms
                 if pt == 'Standard double gradient':
                     pdata = plateNorm[:, i][0]
@@ -372,6 +371,8 @@ except:
                     x_range = list(range(8))
                     next_element = lambda x,y: x*12 + y + 1
                 if pt == 'Low glucose full plate':
+                    print(plateNorm[:, i][0].shape)
+                    sys.exit()
                     pdata = np.fliplr(plateNorm[:, i][0])
                     y_range = list(range(12))
                     x_range = list(range(8))
@@ -394,7 +395,6 @@ except:
              'well':[]}
     for hxt in transporters:
         for i in range(14*16):
-            #table['actual_on_fraction'].append(statistics[hxt][i]['actual_on_fraction'])
             for m in statistics[hxt][i]["mean"]:
                 table['strain'].append(hxt)
                 table['mean'].append(m)
@@ -404,4 +404,3 @@ except:
 
 make_on_fraction_comparison(statisticsdf, transporters)
 make_decision_threshold_comparison(statisticsdf, transporters)
-# make_on_fraction_comparison_display(collect, transporters)    
