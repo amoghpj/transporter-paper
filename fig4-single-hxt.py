@@ -2,7 +2,6 @@ from matplotlib import cm
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-import os
 import numpy as np
 from scipy.io import loadmat
 import sys
@@ -10,6 +9,7 @@ import time
 from tqdm import tqdm
 from scipy.stats import gaussian_kde, norm
 from sklearn import mixture
+
 def gaussian_fit(x, y, vals, muThresh,ax=None):
     """
     returns: dictionary of level and fraction metrics
@@ -158,14 +158,12 @@ def make_on_fraction_comparison(statisticsdf, transporters):
     plt.tight_layout()    
     plt.savefig(f"./img/fig4c_heatmap.pdf",dpi=400)
     plt.close()
-    
-    
+   
 def make_decision_threshold_comparison(statistics, transporters):
     plt.close()
     cmap1 = matplotlib.colors.ListedColormap(cm.get_cmap(cmap_name, 30).colors)
     fig = plt.figure(figsize=(6,7))
     ax = fig.add_subplot(1,1,1)
-    
     for hxtid, hxt in enumerate(transporters):
         dfoi = statistics[statistics.strain == hxt]
         rowpos = []
@@ -174,16 +172,17 @@ def make_decision_threshold_comparison(statistics, transporters):
         for row in range(14):
             tcross_list = []
             for col in range(16):
-                wellmeans = dfoi[dfoi.well == row*16+col]['mean'].values
+                wellmeans = dfoi[(dfoi.well == row*16+col)]['mean'].values
                 if len(wellmeans) > 0:
-                    threshcross = [w >= 0.5 for w in wellmeans]
+                    threshcross = [w >= 0.4 for w in wellmeans]
                     if sum(threshcross) > 1:
                         tcross_list.append(col)
-                        if float(sum(threshcross))/float(len(threshcross)) == 1:
+                        if float(sum(threshcross))/float(len(threshcross)) >= 0.7:
+                            #if sum(threshcross) >= 3:
                             break
-            if len(wellmeans) > 0:
+            if len(tcross_list) > 0:
                 rowpos.append(row)
-                meancoords.append(np.mean(tcross_list))
+                meancoords.append(np.median(tcross_list))
                 errorcoords.append([abs(meancoords[-1] - min(tcross_list)),
                                     abs(meancoords[-1] - max(tcross_list))])
         print(hxt, meancoords)
@@ -196,8 +195,14 @@ def make_decision_threshold_comparison(statistics, transporters):
                     capsize=3,)
     ax.set_xlim(0,17)
     ax.set_ylim(0,15)
-    # ax.set_xticks([]) 
-    # ax.set_yticks([])
+    ax.set_yticks(range(15))
+    ax.set_xticks(range(17))
+    xlabels = ['']
+    xlabels.extend([-i for i in reversed(range(16))])
+    ylabels = ['']
+    ylabels.extend([-i for i in reversed(range(14))])
+    ax.set_xticklabels(xlabels)
+    ax.set_yticklabels(ylabels)
     ax.set_ylabel('Glucose')
     ax.set_xlabel('Galactose')    
     plt.legend()
@@ -208,7 +213,7 @@ def make_decision_threshold_comparison(statistics, transporters):
 def calculate_on_fractions(collect, transporters):
     statistics = {}
     for hxtid, hxt in enumerate(transporters):
-        statistics[hxt] = {i:{"mean":[]} for i in range(14*16)}
+        statistics[hxt] = {i:{"mean":[],'ptype':[]} for i in range(14*16)}
         print("Caculating population histograms")
         mean = 0
         fig = plt.figure(figsize=(25,25))
@@ -219,7 +224,8 @@ def calculate_on_fractions(collect, transporters):
             ax.set_xticks([])
             ax.set_yticks([])
             L = []
-            for l in collect[hxt][i]:
+            ptype = []
+            for l, pt in zip(collect[hxt][i]['data'],collect[hxt][i]['type']):
                 if len(l) > 0:
                     # NOTE There is some funny business with how the matlab data file
                     #      stores the values. They are stored as a python list of single value
@@ -227,6 +233,7 @@ def calculate_on_fractions(collect, transporters):
                     #      I get around this by converting the list of values to an array and then
                     #      flattening it.
                     L.append(np.array(l).flatten('C'))
+                    ptype.append(pt)
             if len(L)> 0:
                 extlist = []
                 for _l in L:
@@ -236,11 +243,8 @@ def calculate_on_fractions(collect, transporters):
                     onThreshold = 2.0
                     # This is an expensive function
                     extlist.append(gaussian_fit(x, y, _l, onThreshold, ax))
-                statistics[hxt][i]["mean"] = [e["on_fraction"] for e in extlist]
-            # else:
-            #     # We assume that the on fraction is the same as that in the well "above" it
-            #     # if it wasn't measured.
-            #     statistics[hxt][i] = statistics[hxt][max(0, i-16)]
+                statistics[hxt][i]["mean"] = [e["actual_on_fraction"] for e in extlist]
+                statistics[hxt][i]["ptype"] = ptype
         plt.tight_layout()
         plt.savefig(f"{hxt}.png")
         plt.close()
@@ -249,12 +253,12 @@ def calculate_on_fractions(collect, transporters):
 ## 1. Read the metadata table
 cmap_name = "viridis"
 transporters = [
-    # "HXT1",
-    # "HXT2", 
+    "HXT1",
+    "HXT2", 
     "HXT5", 
-    # "HXT10",
-    # "GAL2",
-    # "WT"
+    "HXT10",
+    "GAL2",
+    "WT"
                 ]
 positionmapper =  [
     "Standard double gradient",
@@ -324,11 +328,10 @@ try:
 except:
     prefix = "../data/fig4-single-transporter/"    
     print("1. Reading metadata table...")    
-    metadatatable = pd.read_csv(prefix + "fulldgmetatable.csv",index_col='nPlate')
+    metadatatable = pd.read_csv(prefix + "fulldgmetatable.csv")
     metadatatable = metadatatable[metadatatable.useData == 1]
-    metadatatable.drop([47], axis='rows',inplace=True)
-    #metadatatable["ind"] = metadatatable.index
-    # plateindex = {}
+    metadatatable["ind"] = metadatatable.index
+    plateindex = {}
 
     # for hxt in transporters:
     #     plateindex[hxt] = metadatatable[metadatatable.plateNames == hxt].ind.values
@@ -340,22 +343,21 @@ except:
     print(f"\tLoading took {time.time() - starttime}s")
     plateNorm = data['normSSC'] # Read the size normalized fluorescent values
     print(plateNorm.shape)
-    sys.exit()
-
     ## Try to fill each well in a linear list
-    collect = {t:{ind:[]
+    collect = {t:{ind:{'data':[],'type':[]}
                   for ind in range(14*16)}
                for t in transporters}
 
     ## 3. Collect the plates of interest
     print("3. Collect wells...")
-    exceptionlist = [("WT", "Low glucose half plate"), ]
+    exceptionlist = []#[("WT", "Low glucose half plate"), ]
     for hxtid, hxt in enumerate(transporters):
         print(hxt)
         # filter to a given HXT
         for pt in positionmapper:
             print(pt)
-            hxt_pt_plates = metadatatable[(metadatatable.plateNames == hxt) & (metadatatable.plateType == pt)]
+            hxt_pt_plates = metadatatable[(metadatatable.plateNames == hxt) &\
+                                          (metadatatable.plateType == pt)]
             print(hxt, pt, hxt_pt_plates.shape)
             for i, row in hxt_pt_plates.iterrows():
                 print(i)
@@ -367,38 +369,49 @@ except:
                     next_element = lambda x,y: x*12 + y + 1
                 if pt == 'Low glucose half plate':
                     pdata = np.fliplr(plateNorm[:, i][0])
-                    y_range = list(range(12))
-                    x_range = list(range(8))
-                    next_element = lambda x,y: x*12 + y + 1
+                    if hxt == "WT":
+                        y_range = list(range(12))
+                        x_range = list(range(5,8))
+                        next_element = lambda x,y: x*12 + y + 1
+                    # elif hxt == "HXT5":
+                    #     y_range = list(range(6,12))
+                    #     x_range = list(range(8))
+                    #     next_element = lambda x,y: x*12 + y + 1
+                    else:
+                        y_range = list(range(12))
+                        x_range = list(range(8))
+                        next_element = lambda x,y: x*12 + y + 1
                 if pt == 'Low glucose full plate':
-                    print(plateNorm[:, i][0].shape)
-                    sys.exit()
                     pdata = np.fliplr(plateNorm[:, i][0])
                     y_range = list(range(12))
                     x_range = list(range(8))
                     next_element = lambda x,y: x*12 + y + 1                
+
                 if pt == "Low glu-gal gradient":
                     pdata = np.fliplr(plateNorm[:, i][0].T)
                     y_range = list(range(8))
                     x_range = list(range(12))
                     next_element = lambda x,y: x*8 + y + 1
-                # cols = 12
                 if (hxt, pt) not in exceptionlist:
                     for x in x_range:
                         for y in y_range:
-                            collect[hxt][layouts[pt][next_element(x,y)]].\
+                            collect[hxt][layouts[pt][next_element(x,y)]]['data'].\
                                 append(list(4 + np.log10(pdata[x,y]['yfp'])))
+                            collect[hxt][layouts[pt][next_element(x,y)]]['type'].\
+                                append(pt)
     
     statistics = calculate_on_fractions(collect, transporters)
     table = {'strain':[],
              'mean':[],
-             'well':[]}
+             'well':[],
+             'ptype':[]}
     for hxt in transporters:
         for i in range(14*16):
-            for m in statistics[hxt][i]["mean"]:
+            for m, p in zip(statistics[hxt][i]["mean"],statistics[hxt][i]["ptype"]):
                 table['strain'].append(hxt)
                 table['mean'].append(m)
                 table['well'].append(i)
+                table['ptype'].append(p)
         statisticsdf = pd.DataFrame(table)
         statisticsdf.to_csv('statistics.csv')
 
