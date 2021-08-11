@@ -35,10 +35,10 @@ def estimated_on_fraction(x, params):
     return(estimated_of)
 
 root = './data/maltose-galactose-dg/'
-platedata = {'high':{'plates':['cenpk-mal-gal-high-16-1',
-                               'cenpk-mal-gal-high-16-2'],
-                     'ncols':8,
-                     'outname':'fig2'},
+platedata = {# 'high':{'plates':['cenpk-mal-gal-high-16-1',
+             #                   'cenpk-mal-gal-high-16-2'],
+             #         'ncols':8,
+             #         'outname':'fig2'},
              'low':{'plates':['cenpk-mal-gal-low-24-1',
                               'cenpk-mal-gal-low-24-2'],
                     'ncols':7,
@@ -49,7 +49,7 @@ for platetype, details in platedata.items():
     ncols = details['ncols']
     axes = [fig.add_subplot(nrows,ncols,i) for i in range(1,nrows*ncols+1)]
 
-    cmap1 = matplotlib.colors.ListedColormap(cm.get_cmap(cmap_name, 50).colors[4:])
+    cmap1 = matplotlib.colors.ListedColormap(cm.get_cmap(cmap_name, 15).colors[2:])
     layout = np.array([i for i in range(1,97)]).reshape(8,12).T
     layout = np.flipud(layout[:,8-ncols:])
     dflist = [np.log10(pd.read_csv(f"{root}{p}.csv",

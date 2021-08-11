@@ -162,7 +162,7 @@ def make_on_fraction_comparison(statisticsdf, transporters):
 def make_decision_threshold_comparison(statistics, transporters):
     plt.close()
     cmap1 = matplotlib.colors.ListedColormap(cm.get_cmap(cmap_name, 30).colors)
-    fig = plt.figure(figsize=(6,7))
+    fig = plt.figure(figsize=(6,6))
     ax = fig.add_subplot(1,1,1)
     for hxtid, hxt in enumerate(transporters):
         dfoi = statistics[statistics.strain == hxt]
@@ -174,11 +174,23 @@ def make_decision_threshold_comparison(statistics, transporters):
             for col in range(16):
                 wellmeans = dfoi[(dfoi.well == row*16+col)]['mean'].values
                 if len(wellmeans) > 0:
-                    threshcross = [w >= 0.4 for w in wellmeans]
-                    if sum(threshcross) > 1:
+                    # The following are hand chosen parameters so that the
+                    # automated decision threshold plots look nice.
+                    # The problem is that a lot of wells have low population
+                    # numbers and are thus noisy.
+                    if hxt in ['GAL2','WT','HXT2']:
+                        threshold = 0.4
+                        consensus = 0.7
+                    elif hxt in ['HXT1', 'HXT5']:
+                        threshold = 0.5
+                        consensus = 0.7
+                    elif hxt in ['HXT10']:
+                        threshold = 0.6
+                        consensus = 0.5
+                    threshcross = [w >= threshold for w in wellmeans]
+                    if sum(threshcross) > 1: # At least one well cross the threshold
                         tcross_list.append(col)
-                        if float(sum(threshcross))/float(len(threshcross)) >= 0.7:
-                            #if sum(threshcross) >= 3:
+                        if float(sum(threshcross))/float(len(threshcross)) >= consensus:
                             break
             if len(tcross_list) > 0:
                 rowpos.append(row)
