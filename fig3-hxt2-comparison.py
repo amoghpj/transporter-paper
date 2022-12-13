@@ -3,7 +3,8 @@ import matplotlib
 from matplotlib import cm
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import norm
+from utils import estimated_on_fraction, cmap1
+
 
 strains = {'cd112':{'path':'1','desc':'HXT2','c':'k'},
            'hj101':{'path':'1','desc':'HXT2-sensorless','c':'r'}}
@@ -22,42 +23,11 @@ for row in range(numrows):
             wom[counter] = row*numcols + int((col + numcols)/2)
         counter += 1
         
-def estimated_on_fraction(x, params):
-    estimated_of = 0.0
-    on_level = params['on_level']
-    off_level = params['off_level']
-    on_fraction = params['on_fraction']
-    off_fraction = params['off_fraction']
-    on_sigma = params['on_sigma']
-    off_sigma = params['off_sigma']
-    estimated_of = 0
-    if off_sigma > 0:
-        yfit_off = off_fraction*norm.pdf(x, loc=off_level,
-                                        scale=np.sqrt(off_sigma))
-        denom = sum(yfit_off)
-        num = sum([off_fraction*norm.pdf(_x, loc=off_level,
-                                              scale=np.sqrt(off_sigma))
-                   for _x in x if _x > muThresh])            
-        estimated_of += num/denom*off_fraction
-    if on_sigma > 0:
-        yfit_on = on_fraction*norm.pdf(x, loc=on_level,
-                                        scale=np.sqrt(on_sigma))            
-
-        denom = sum(yfit_on)
-        num = sum([on_fraction*norm.pdf(_x, loc=on_level,
-                                              scale=np.sqrt(on_sigma))
-                   for _x in x if _x > muThresh])
-        estimated_of += num/denom*on_fraction
-    return(estimated_of)
-
 for strain, details in strains.items():
     print(strain)
     description=details['desc']
     expid = details['path']
     fig = plt.figure(figsize=(24,16))
-    cmap_name = "viridis"
-    cmap1 = matplotlib.colors.ListedColormap(cm.get_cmap(cmap_name, 30).colors[5:])
-    # cmap1 = LinearSegmentedColormap.from_list('parula', cm_data)
     paramdf = pd.read_csv(f"{path}/extracted_params_{strain}-{expid}.csv",
                                       index_col=0).replace(np.nan,0.0)
     muThresh = paramdf['muThresh'].iloc[1]
@@ -81,7 +51,7 @@ for strain, details in strains.items():
         ax.set_yticklabels([])
         ax.set_xticklabels([])
         params = paramdf.iloc[i]
-        ax.set_facecolor(cmap1(estimated_on_fraction(x,params)))
+        ax.set_facecolor(cmap1(estimated_on_fraction(x, params, muThresh)))
     plt.subplots_adjust(wspace=0, hspace=0)
     #plt.tight_layout()
     plt.savefig(f"{description}.pdf",dpi=200)
